@@ -21,8 +21,9 @@ async function run() {
   try {
     const appointmentOPtinoCollection = client.db('doctorsprotal').collection('appointmentOption')
     const bookingsColleaction = client.db('doctorsprotal').collection('bookings')
+    const usersColleaction = client.db('doctorsprotal').collection('users')
     //use aggregate to quert multiple and then merge data
-   
+
     app.get('/appointmentOption', async (req, res) => {
       const date = req.query.date;
       const query = {};
@@ -34,103 +35,121 @@ async function run() {
 
       // code carefully :D
       options.forEach(option => {
-          const optionBooked = alreadyBooked.filter(book => book.treatment === option.name);
-          const bookedSlots = optionBooked.map(book => book.slot);
-         // console.log(option.name,bookedSlots)
-          const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot))
-         option.slots = remainingSlots;
+        const optionBooked = alreadyBooked.filter(book => book.treatment === option.name);
+        const bookedSlots = optionBooked.map(book => book.slot);
+        // console.log(option.name,bookedSlots)
+        const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot))
+        option.slots = remainingSlots;
       })
       res.send(options);
-  });
+    });
 
 
 
-//deep mongodb
+    //deep mongodb
 
-//   app.get('/v2/appointmentOptions', async (req, res) => {
-//     const date = req.query.date;
-//     const options = await appointmentOptionCollection.aggregate([
-//         {
-//             $lookup: {
-//                 from: 'bookings',
-//                 localField: 'name',
-//                 foreignField: 'treatment',
-//                 pipeline: [
-//                     {
-//                         $match: {
-//                             $expr: {
-//                                 $eq: ['$appointmentDate', date]
-//                             }
-//                         }
-//                     }
-//                 ],
-//                 as: 'booked'
-//             }
-//         },
-//         {
-//             $project: {
-//                 name: 1,
-//                 slots: 1,
-//                 booked: {
-//                     $map: {
-//                         input: '$booked',
-//                         as: 'book',
-//                         in: '$$book.slot'
-//                     }
-//                 }
-//             }
-//         },
-//         {
-//             $project: {
-//                 name: 1,
-//                 slots: {
-//                     $setDifference: ['$slots', '$booked']
-//                 }
-//             }
-//         }
-//     ]).toArray();
-//     res.send(options);
-// })
+    //   app.get('/v2/appointmentOptions', async (req, res) => {
+    //     const date = req.query.date;
+    //     const options = await appointmentOptionCollection.aggregate([
+    //         {
+    //             $lookup: {
+    //                 from: 'bookings',
+    //                 localField: 'name',
+    //                 foreignField: 'treatment',
+    //                 pipeline: [
+    //                     {
+    //                         $match: {
+    //                             $expr: {
+    //                                 $eq: ['$appointmentDate', date]
+    //                             }
+    //                         }
+    //                     }
+    //                 ],
+    //                 as: 'booked'
+    //             }
+    //         },
+    //         {
+    //             $project: {
+    //                 name: 1,
+    //                 slots: 1,
+    //                 booked: {
+    //                     $map: {
+    //                         input: '$booked',
+    //                         as: 'book',
+    //                         in: '$$book.slot'
+    //                     }
+    //                 }
+    //             }
+    //         },
+    //         {
+    //             $project: {
+    //                 name: 1,
+    //                 slots: {
+    //                     $setDifference: ['$slots', '$booked']
+    //                 }
+    //             }
+    //         }
+    //     ]).toArray();
+    //     res.send(options);
+    // })
 
-/***
- * API Naming Convention 
- * app.get('/bookings')
- * app.get('/bookings/:id')
- * app.post('/bookings')
- * app.patch('/bookings/:id')
- * app.delete('/bookings/:id')
-*/
+    /***
+     * API Naming Convention 
+     * app.get('/bookings')
+     * app.get('/bookings/:id')
+     * app.post('/bookings')
+     * app.patch('/bookings/:id')
+     * app.delete('/bookings/:id')
+    */
 
 
 
     //booing
+     //get
+     // email user
+    app.get('/booking',async(req,res)=>{
+      const email=req.query.email;
+      const query ={email:email};
+      const booking=await bookingsColleaction.find(query).toArray();
+      res.send(booking)
+    })
 
 
-  app.post('/bookings', async (req, res) => {
-    const booking = req.body;
+
+     //post
+
+    app.post('/bookings', async (req, res) => {
+      const booking = req.body;
 
 
-    console.log(booking);
-    const query = {
+      console.log(booking);
+      const query = {
         appointmentDate: booking.appointmentDate,
         email: booking.email,
-        treatment: booking.treatment 
-    }
+        treatment: booking.treatment
+      }
 
-    const alreadyBooked = await bookingsColleaction.find(query).toArray();
+      const alreadyBooked = await bookingsColleaction.find(query).toArray();
 
-    if (alreadyBooked.length){
+      if (alreadyBooked.length) {
         const message = `You already have a booking on ${booking.appointmentDate}`
-        return res.send({acknowledged: false, message})
-    }
+        return res.send({ acknowledged: false, message })
+      }
 
-    
 
-    const result = await bookingsColleaction.insertOne(booking);
-    res.send(result);
-})
 
-}
+      const result = await bookingsColleaction.insertOne(booking);
+      res.send(result);
+    })
+
+    //users
+    app.post('/users',async(req,res)=>{
+      const user=req.body;
+      const result =await usersColleaction.insertOne(user);
+      res.send(result);
+    })
+
+  }
   finally {
 
   }
