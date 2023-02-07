@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors');
 const port = process.env.PORT || 5000
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const jwt=require('jsonwebtoken')
 require('dotenv').config()
 const app = express();
 
@@ -140,6 +141,18 @@ async function run() {
 
       const result = await bookingsColleaction.insertOne(booking);
       res.send(result);
+    })
+    //jwt
+    app.get('/jwt',async(req,res)=>{
+      const email=req.query.email;
+      const query={email:email}
+      const user=await usersColleaction.findOne(query)
+      if(user){
+        const tokan=jwt.sign({email}.process.env.ACCRSS_TOKEN,{expiresIn:'1h'})
+        return res.send({accessToken:tokan});
+      }
+      console.log(user)
+      res.status(403).send({accessToken:''})
     })
 
     //users
