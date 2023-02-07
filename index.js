@@ -23,9 +23,16 @@ function verifyJWT(req,res,next){
   console.log('verfi', req.headers.authorization);
   const authHeader=req.headers.authorization;
   if(!authHeader){
-    return res.send(401).sebd('unauthorized cheak')
+    return res.status(401).send('unauthorized cheak')
   }
   const tokan= authHeader.split(''[1]);
+  jwt.verify(tokan,process.env.ACCESS_TOKEN,function(err,decoded){
+    if(err){
+      return res.status(403).send({message:'forbidden access'})
+    }
+    req.decoded=decoded;
+  })
+  
 }
 
 
@@ -121,7 +128,10 @@ async function run() {
     // email user
     app.get('/booking', verifyJWT, async (req, res) => {
       const email = req.query.email;
-      
+    //   const decodeEmail=req.query.email;
+    //   if(email==decodeEmail){
+    //  return res.status(403).send({message:'forbidden access'})
+    //   }
       const query = { email: email };
       const booking = await bookingsColleaction.find(query).toArray();
       res.send(booking)
