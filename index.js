@@ -2,7 +2,7 @@ const express = require('express')
 const cors = require('cors');
 const port = process.env.PORT || 5000
 const { MongoClient, ServerApiVersion } = require('mongodb');
-const jwt=require('jsonwebtoken')
+const jwt = require('jsonwebtoken')
 require('dotenv').config()
 const app = express();
 
@@ -16,6 +16,17 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dzfwzfk.mongodb.net/?retryWrites=true&w=majority`;
 //console.log(uri)
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+
+//verigyjwt
+function verifyJWT(req,res,next){
+  console.log('verfi', req.headers.authorization);
+  const authHeader=req.headers.authorization;
+  if(!authHeader){
+    return res.send(401).sebd('unauthorized cheak')
+  }
+  const tokan= authHeader.split(''[1]);
+}
 
 
 async function run() {
@@ -106,23 +117,24 @@ async function run() {
 
 
     //booing
-     //get
-     // email user
-    app.get('/booking',async(req,res)=>{
-      const email=req.query.email;
-      const query ={email:email};
-      const booking=await bookingsColleaction.find(query).toArray();
+    //get
+    // email user
+    app.get('/booking', verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      
+      const query = { email: email };
+      const booking = await bookingsColleaction.find(query).toArray();
       res.send(booking)
     })
 
 
 
-     //post
+    //post
 
     app.post('/bookings', async (req, res) => {
       const booking = req.body;
 
-
+      
       console.log(booking);
       const query = {
         appointmentDate: booking.appointmentDate,
@@ -143,22 +155,21 @@ async function run() {
       res.send(result);
     })
     //jwt
-    app.get('/jwt',async(req,res)=>{
-      const email=req.query.email;
-      const query={email:email}
-      const user=await usersColleaction.findOne(query)
-      if(user){
-        const tokan=jwt.sign({email}.process.env.ACCRSS_TOKEN,{expiresIn:'1h'})
-        return res.send({accessToken:tokan});
+    app.get('/jwt', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await usersColleaction.findOne(query);
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+        return res.send({ accessToken: token });
       }
-      console.log(user)
-      res.status(403).send({accessToken:''})
-    })
+      res.status(403).send({ accessToken: '' })
+    });
 
     //users
-    app.post('/users',async(req,res)=>{
-      const user=req.body;
-      const result =await usersColleaction.insertOne(user);
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const result = await usersColleaction.insertOne(user);
       res.send(result);
     })
 
