@@ -1,7 +1,7 @@
 const express = require('express')
 const cors = require('cors');
 const port = process.env.PORT || 5000
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
 const app = express();
@@ -19,20 +19,20 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 
 //verigyjwt
-function verifyJWT(req,res,next){
+function verifyJWT(req, res, next) {
   console.log('verfi', req.headers.authorization);
-  const authHeader=req.headers.authorization;
-  if(!authHeader){
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
     return res.status(401).send('unauthorized cheak')
   }
-  const tokan= authHeader.split(''[1]);
-  jwt.verify(tokan,process.env.ACCESS_TOKEN,function(err,decoded){
-    if(err){
-      return res.status(403).send({message:'forbidden access'})
+  const tokan = authHeader.split(''[1]);
+  jwt.verify(tokan, process.env.ACCESS_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: 'forbidden access' })
     }
-    req.decoded=decoded;
+    req.decoded = decoded;
   })
-  
+
 }
 
 
@@ -128,10 +128,10 @@ async function run() {
     // email user
     app.get('/booking', verifyJWT, async (req, res) => {
       const email = req.query.email;
-    //   const decodeEmail=req.query.email;
-    //   if(email==decodeEmail){
-    //  return res.status(403).send({message:'forbidden access'})
-    //   }
+      //   const decodeEmail=req.query.email;
+      //   if(email==decodeEmail){
+      //  return res.status(403).send({message:'forbidden access'})
+      //   }
       const query = { email: email };
       const booking = await bookingsColleaction.find(query).toArray();
       res.send(booking)
@@ -144,7 +144,7 @@ async function run() {
     app.post('/bookings', async (req, res) => {
       const booking = req.body;
 
-      
+
       console.log(booking);
       const query = {
         appointmentDate: booking.appointmentDate,
@@ -178,16 +178,33 @@ async function run() {
 
 
     //alluers
-    app.get('/users',async(req,res)=>{
-    const query={};
-    const users=await usersColleaction.find(query).toArray();
-    res.send(users);
+    app.get('/users', async (req, res) => {
+      const query = {};
+      const users = await usersColleaction.find(query).toArray();
+      res.send(users);
     })
 
     //users
     app.post('/users', async (req, res) => {
       const user = req.body;
       const result = await usersColleaction.insertOne(user);
+      res.send(result);
+    })
+
+
+
+
+    //admin role
+    app.put('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) }
+      const options = { upsert: true };
+      const UpdataedDoc = {
+        $set: {
+          role: 'admin'
+        }
+      }
+      const result = await usersColleaction.updateOne(filter, UpdataedDoc, options)
       res.send(result);
     })
 
