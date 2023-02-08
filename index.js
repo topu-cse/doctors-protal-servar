@@ -191,11 +191,26 @@ async function run() {
       res.send(result);
     })
 
+   //who is admin
+   app.get('/users/admin/:email',async(req,res)=>{
+    const email=req.params.email;
+    const query={email};
+    const user=await usersColleaction.findOne(query);
+    res.send({isAdmin:user?.role==='admin'});
 
+   })
 
 
     //admin role
-    app.put('/users/admin/:id', async (req, res) => {
+    app.put('/users/admin/:id',verifyJWT, async (req, res) => {
+      const decodeEmail=req.decoded.email;
+      const query={email: decodeEmail}
+
+      if(user?.rle !=='admin'){
+        return res.status(403).send({message:'forbidden access'})
+      }
+      const user=await usersColleaction.aggregate.findOne(query)
+
       const id = req.params.id;
       const filter = { _id: ObjectId(id) }
       const options = { upsert: true };
