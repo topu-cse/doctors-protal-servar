@@ -176,6 +176,14 @@ async function run() {
       res.status(403).send({ accessToken: '' })
     });
 
+
+    //alluers
+    app.get('/users',async(req,res)=>{
+    const query={};
+    const users=await usersColleaction.find(query).toArray();
+    res.send(users);
+    })
+
     //users
     app.post('/users', async (req, res) => {
       const user = req.body;
