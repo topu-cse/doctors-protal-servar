@@ -20,7 +20,7 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 //verigyjwt
 function verifyJWT(req, res, next) {
-  console.log('verfi', req.headers.authorization);
+  // console.log('verfi', req.headers.authorization);
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).send('unauthorized cheak')
@@ -31,10 +31,11 @@ function verifyJWT(req, res, next) {
       return res.status(403).send({ message: 'forbidden access' })
     }
     req.decoded = decoded;
+    next();
   })
 
 }
-
+  
 
 async function run() {
   try {
@@ -42,6 +43,21 @@ async function run() {
     const bookingsColleaction = client.db('doctorsprotal').collection('bookings')
     const usersColleaction = client.db('doctorsprotal').collection('users')
     const doctorsColleaction = client.db('doctorsprotal').collection('doctors')
+
+
+   //admin verfiy. make sure you use verfiyAdmin after verifyJWT
+  const verifyAdmin =async (req, res, next) => {  
+    console.log(req.decoded.email,'iksaurgyhiu')
+    const decodeEmail = req.decoded.email;
+    const query = { email: decodeEmail }
+    const user = await usersColleaction.findOne(query)
+    if (user?.role !== 'admin') {
+      return res.status(403).send({ message: 'forbidden access' })
+    }
+    next();
+  }
+
+
     //use aggregate to quert multiple and then merge data
 
     app.get('/appointmentOption', async (req, res) => {
@@ -66,16 +82,16 @@ async function run() {
 
 
     //add doctors 
-    app.get('/appointmentSpecialty',async(req,res)=>{
-      const query={}
-      const result=await appointmentOPtinoCollection.find(query).project({name: 1}).toArray();
+    app.get('/appointmentSpecialty', async (req, res) => {
+      const query = {}
+      const result = await appointmentOPtinoCollection.find(query).project({ name: 1 }).toArray();
       res.send(result);
     })
 
     //booing
     //get
     // email user
-    app.get('/booking', verifyJWT, async (req, res) => {
+    app.get('/booking',verifyJWT,  async (req, res) => {
       const email = req.query.email;
       //   const decodeEmail=req.query.email;
       //   if(email==decodeEmail){
@@ -120,7 +136,7 @@ async function run() {
       const query = { email: email };
       const user = await usersColleaction.findOne(query);
       if (user) {
-        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '3h' })
         return res.send({ accessToken: token });
       }
       res.status(403).send({ accessToken: '' })
@@ -135,59 +151,60 @@ async function run() {
     })
 
     //users
-    app.post('/users', async (req, res) => {
+    app.post('/users',  async (req, res) => {
       const user = req.body;
       const result = await usersColleaction.insertOne(user);
       res.send(result);
     })
 
-   //who is admin
-   app.get('/users/admin/:email',async(req,res)=>{
-    const email=req.params.email;
-    const query={email};
-    const user=await usersColleaction.findOne(query);
-    res.send({isAdmin:user?.role==='admin'});
+    //who is admin
+    app.get('/users/admin/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await usersColleaction.findOne(query);
+      res.send({ isAdmin: user?.role === 'admin' });
 
-   })
+    })
 
 
     //admin role
-    app.put('/users/admin/:id',verifyJWT, async (req, res) => {
-      const decodeEmail=req.decoded.email;
-      const query={email: decodeEmail}
-
-      if(user?.rle !=='admin'){
-        return res.status(403).send({message:'forbidden access'})
-      }
-      const user=await usersColleaction.aggregate.findOne(query)
-
+    app.put('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) }
       const options = { upsert: true };
-      const UpdataedDoc = {
+      const UpdatedDoc = {
         $set: {
           role: 'admin'
         }
       }
-      const result = await usersColleaction.updateOne(filter, UpdataedDoc, options)
+      const result = await usersColleaction.updateOne(filter, UpdatedDoc, options)
       res.send(result);
     })
 
     //doctorsColleaction load clien side
-    app.get('/doctors',async(req,res)=>{
-      const query={}
-      const result =await doctorsColleaction.find(query).toArray();
+    app.get('/doctors',  async (req, res) => {
+      const query = {}
+      const result = await doctorsColleaction.find(query).toArray();
       res.send(result)
     })
 
 
     //doctorsColleaction database
-    app.post('/doctors',async(req,res)=>{
-      const doctor=req.body;
-       const result=await doctorsColleaction.insertOne(doctor);
-       res.send(result);
+    app.post('/doctors' ,  async (req, res) => {
+      const doctor = req.body;
+      const result = await doctorsColleaction.insertOne(doctor);
+      res.send(result);
     })
-       
+
+
+    //doctorsColleaction  delete  
+    app.delete('/doctors/:id', verifyJWT, verifyAdmin,  async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await doctorsColleaction.deleteOne(filter)
+      res.send(result)
+    })
+  
   }
   finally {
 
@@ -200,3 +217,5 @@ app.get('/', async (req, res) => {
   res.send('doctors protal servar is running')
 })
 app.listen(port, () => console.log(`Doctors protal running on ${port}`))
+
+
