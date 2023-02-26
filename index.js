@@ -2,7 +2,8 @@ const express = require('express')
 const cors = require('cors');
 const port = process.env.PORT || 5000
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+
 require('dotenv').config()
 const app = express();
 
@@ -18,20 +19,21 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
-//verigyjwt
 function verifyJWT(req, res, next) {
-  // console.log('verfi', req.headers.authorization);
+
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return res.status(401).send('unauthorized cheak')
+      return res.status(401).send('unauthorized access');
   }
-  const tokan = authHeader.split(''[1]);
-  jwt.verify(tokan, process.env.ACCESS_TOKEN, function (err, decoded) {
-    if (err) {
-      return res.status(403).send({ message: 'forbidden access' })
-    }
-    req.decoded = decoded;
-    next();
+
+  const token = authHeader.split(' ')[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+      if (err) {
+          return res.status(403).send({ message: 'forbidden access' })
+      }
+      req.decoded = decoded;
+      next();
   })
 
 }
@@ -46,16 +48,16 @@ async function run() {
 
 
    //admin verfiy. make sure you use verfiyAdmin after verifyJWT
-  const verifyAdmin =async (req, res, next) => {  
-    console.log(req.decoded.email,'iksaurgyhiu')
-    const decodeEmail = req.decoded.email;
-    const query = { email: decodeEmail }
-    const user = await usersColleaction.findOne(query)
+   const verifyAdmin = async (req, res, next) =>{
+    const decodedEmail = req.decoded.email;
+    const query = { email: decodedEmail };
+    const user = await usersColleaction.findOne(query);
+
     if (user?.role !== 'admin') {
-      return res.status(403).send({ message: 'forbidden access' })
+        return res.status(403).send({ message: 'forbidden access' })
     }
     next();
-  }
+}
 
 
     //use aggregate to quert multiple and then merge data
@@ -91,16 +93,22 @@ async function run() {
     //booing
     //get
     // email user
-    app.get('/booking',verifyJWT,  async (req, res) => {
+    app.get('/bookings',verifyJWT,  async (req, res) => {
       const email = req.query.email;
-      //   const decodeEmail=req.query.email;
-      //   if(email==decodeEmail){
-      //  return res.status(403).send({message:'forbidden access'})
-      //   }
+      
+      const decodedEmail = req.decoded.email;
+        
+      if (email !== decodedEmail) {
+          return res.status(403).send({ message: 'forbidden access' });
+      }
+
       const query = { email: email };
-      const booking = await bookingsColleaction.find(query).toArray();
-      res.send(booking)
-    })
+    
+      const bookings = await bookingsColleaction.find(query).toArray();
+      res.send(bookings);
+  })
+
+ 
 
 
 
@@ -168,7 +176,7 @@ async function run() {
 
 
     //admin role
-    app.put('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
+    app.put('/users/admin/:id',  verifyJWT,verifyAdmin,  async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) }
       const options = { upsert: true };
