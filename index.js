@@ -83,6 +83,60 @@ async function run() {
     });
 
 
+
+    //addvence
+    
+    app.get('/appointmentOption', async (req, res) => {
+      const date = req.query.date;
+      const options = await appointmentOPtinoCollection.aggregate([
+          {
+              $lookup: {
+                  from: 'bookings',
+                  localField: 'name',
+                  foreignField: 'treatment',
+                  pipeline: [
+                      {
+                          $match: {
+                              $expr: {
+                                  $eq: ['$appointmentDate', date]
+                              }
+                          }
+                      }
+                  ],
+                  as: 'booked'
+              }
+          },
+          {
+              $project: {
+                  name: 1,
+                  price: 1,
+                  slots: 1,
+                  booked: {
+                      $map: {
+                          input: '$booked',
+                          as: 'book',
+                          in: '$$book.slot'
+                      }
+                  }
+              }
+          },
+          {
+              $project: {
+                  name: 1,
+                  price: 1,
+                  slots: {
+                      $setDifference: ['$slots', '$booked']
+                  }
+              }
+          }
+      ]).toArray();
+      res.send(options);
+  })
+
+
+
+
+
     //add doctors 
     app.get('/appointmentSpecialty', async (req, res) => {
       const query = {}
@@ -188,6 +242,21 @@ async function run() {
       const result = await usersColleaction.updateOne(filter, UpdatedDoc, options)
       res.send(result);
     })
+
+
+    //Temporaru to update price field on appoinment options
+
+    // app.get('/addPrice',async(req,res)=>{
+    //   const filter={}
+    //   const options={upsert:true}
+    //   const UpdatedDoc = {
+    //     $set: {
+    //       Price: 99
+    //     }
+    //   }
+    //   const result =await appointmentOPtinoCollection.updateMany(filter,UpdatedDoc,options)
+    //   res.send(result);
+    // })
 
     //doctorsColleaction load clien side
     app.get('/doctors',  async (req, res) => {
