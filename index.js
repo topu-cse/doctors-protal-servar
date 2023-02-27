@@ -23,21 +23,21 @@ function verifyJWT(req, res, next) {
 
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-      return res.status(401).send('unauthorized access');
+    return res.status(401).send('unauthorized access');
   }
 
   const token = authHeader.split(' ')[1];
 
   jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
-      if (err) {
-          return res.status(403).send({ message: 'forbidden access' })
-      }
-      req.decoded = decoded;
-      next();
+    if (err) {
+      return res.status(403).send({ message: 'forbidden access' })
+    }
+    req.decoded = decoded;
+    next();
   })
 
 }
-  
+
 
 async function run() {
   try {
@@ -47,17 +47,17 @@ async function run() {
     const doctorsColleaction = client.db('doctorsprotal').collection('doctors')
 
 
-   //admin verfiy. make sure you use verfiyAdmin after verifyJWT
-   const verifyAdmin = async (req, res, next) =>{
-    const decodedEmail = req.decoded.email;
-    const query = { email: decodedEmail };
-    const user = await usersColleaction.findOne(query);
+    //admin verfiy. make sure you use verfiyAdmin after verifyJWT
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersColleaction.findOne(query);
 
-    if (user?.role !== 'admin') {
+      if (user?.role !== 'admin') {
         return res.status(403).send({ message: 'forbidden access' })
+      }
+      next();
     }
-    next();
-}
 
 
     //use aggregate to quert multiple and then merge data
@@ -85,53 +85,53 @@ async function run() {
 
 
     //addvence
-    
+
     app.get('/appointmentOption', async (req, res) => {
       const date = req.query.date;
       const options = await appointmentOPtinoCollection.aggregate([
-          {
-              $lookup: {
-                  from: 'bookings',
-                  localField: 'name',
-                  foreignField: 'treatment',
-                  pipeline: [
-                      {
-                          $match: {
-                              $expr: {
-                                  $eq: ['$appointmentDate', date]
-                              }
-                          }
-                      }
-                  ],
-                  as: 'booked'
-              }
-          },
-          {
-              $project: {
-                  name: 1,
-                  price: 1,
-                  slots: 1,
-                  booked: {
-                      $map: {
-                          input: '$booked',
-                          as: 'book',
-                          in: '$$book.slot'
-                      }
+        {
+          $lookup: {
+            from: 'bookings',
+            localField: 'name',
+            foreignField: 'treatment',
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ['$appointmentDate', date]
                   }
+                }
               }
-          },
-          {
-              $project: {
-                  name: 1,
-                  price: 1,
-                  slots: {
-                      $setDifference: ['$slots', '$booked']
-                  }
-              }
+            ],
+            as: 'booked'
           }
+        },
+        {
+          $project: {
+            name: 1,
+            price: 1,
+            slots: 1,
+            booked: {
+              $map: {
+                input: '$booked',
+                as: 'book',
+                in: '$$book.slot'
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            name: 1,
+            price: 1,
+            slots: {
+              $setDifference: ['$slots', '$booked']
+            }
+          }
+        }
       ]).toArray();
       res.send(options);
-  })
+    })
 
 
 
@@ -147,22 +147,22 @@ async function run() {
     //booing
     //get
     // email user
-    app.get('/bookings',verifyJWT,  async (req, res) => {
+    app.get('/bookings', verifyJWT, async (req, res) => {
       const email = req.query.email;
-      
+
       const decodedEmail = req.decoded.email;
-        
+
       if (email !== decodedEmail) {
-          return res.status(403).send({ message: 'forbidden access' });
+        return res.status(403).send({ message: 'forbidden access' });
       }
 
       const query = { email: email };
-    
+
       const bookings = await bookingsColleaction.find(query).toArray();
       res.send(bookings);
-  })
+    })
 
- 
+
 
 
 
@@ -192,6 +192,16 @@ async function run() {
       res.send(result);
     })
 
+
+    //bokimg payment
+   app.get('/booking/:id',async(req,res)=>{
+    const id=req.params.id;
+    const query={_id: ObjectId(id)}
+    const booking =await bookingsColleaction.findOne(query)
+    res.send(booking);
+   })
+      
+
     //jwt
     app.get('/jwt', async (req, res) => {
       const email = req.query.email;
@@ -213,7 +223,7 @@ async function run() {
     })
 
     //users
-    app.post('/users',  async (req, res) => {
+    app.post('/users', async (req, res) => {
       const user = req.body;
       const result = await usersColleaction.insertOne(user);
       res.send(result);
@@ -230,7 +240,7 @@ async function run() {
 
 
     //admin role
-    app.put('/users/admin/:id',  verifyJWT,verifyAdmin,  async (req, res) => {
+    app.put('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) }
       const options = { upsert: true };
@@ -259,7 +269,7 @@ async function run() {
     // })
 
     //doctorsColleaction load clien side
-    app.get('/doctors',  async (req, res) => {
+    app.get('/doctors', async (req, res) => {
       const query = {}
       const result = await doctorsColleaction.find(query).toArray();
       res.send(result)
@@ -267,7 +277,7 @@ async function run() {
 
 
     //doctorsColleaction database
-    app.post('/doctors' ,  async (req, res) => {
+    app.post('/doctors', async (req, res) => {
       const doctor = req.body;
       const result = await doctorsColleaction.insertOne(doctor);
       res.send(result);
@@ -275,13 +285,13 @@ async function run() {
 
 
     //doctorsColleaction  delete  
-    app.delete('/doctors/:id', verifyJWT, verifyAdmin,  async (req, res) => {
+    app.delete('/doctors/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await doctorsColleaction.deleteOne(filter)
       res.send(result)
     })
-  
+
   }
   finally {
 
