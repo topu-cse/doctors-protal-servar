@@ -45,6 +45,7 @@ async function run() {
     const bookingsColleaction = client.db('doctorsprotal').collection('bookings')
     const usersColleaction = client.db('doctorsprotal').collection('users')
     const doctorsColleaction = client.db('doctorsprotal').collection('doctors')
+    const paymentsCollection = client.db('doctorsportal').collection('payments');
 
 
     //admin verfiy. make sure you use verfiyAdmin after verifyJWT
@@ -86,52 +87,52 @@ async function run() {
 
     //addvence
 
-    app.get('/appointmentOption', async (req, res) => {
-      const date = req.query.date;
-      const options = await appointmentOPtinoCollection.aggregate([
-        {
-          $lookup: {
-            from: 'bookings',
-            localField: 'name',
-            foreignField: 'treatment',
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $eq: ['$appointmentDate', date]
-                  }
-                }
-              }
-            ],
-            as: 'booked'
-          }
-        },
-        {
-          $project: {
-            name: 1,
-            price: 1,
-            slots: 1,
-            booked: {
-              $map: {
-                input: '$booked',
-                as: 'book',
-                in: '$$book.slot'
-              }
-            }
-          }
-        },
-        {
-          $project: {
-            name: 1,
-            price: 1,
-            slots: {
-              $setDifference: ['$slots', '$booked']
-            }
-          }
-        }
-      ]).toArray();
-      res.send(options);
-    })
+    // app.get('/appointmentOption', async (req, res) => {
+    //   const date = req.query.date;
+    //   const options = await appointmentOPtinoCollection.aggregate([
+    //     {
+    //       $lookup: {
+    //         from: 'bookings',
+    //         localField: 'name',
+    //         foreignField: 'treatment',
+    //         pipeline: [
+    //           {
+    //             $match: {
+    //               $expr: {
+    //                 $eq: ['$appointmentDate', date]
+    //               }
+    //             }
+    //           }
+    //         ],
+    //         as: 'booked'
+    //       }
+    //     },
+    //     {
+    //       $project: {
+    //         name: 1,
+    //         price: 1,
+    //         slots: 1,
+    //         booked: {
+    //           $map: {
+    //             input: '$booked',
+    //             as: 'book',
+    //             in: '$$book.slot'
+    //           }
+    //         }
+    //       }
+    //     },
+    //     {
+    //       $project: {
+    //         name: 1,
+    //         price: 1,
+    //         slots: {
+    //           $setDifference: ['$slots', '$booked']
+    //         }
+    //       }
+    //     }
+    //   ]).toArray();
+    //   res.send(options);
+    // })
 
 
 
@@ -144,8 +145,10 @@ async function run() {
       res.send(result);
     })
 
-    //booing
+    //booking
     //get
+ 
+
     // email user
     app.get('/bookings', verifyJWT, async (req, res) => {
       const email = req.query.email;
@@ -162,9 +165,7 @@ async function run() {
       res.send(bookings);
     })
 
-
-
-
+ 
 
     //post
 
@@ -291,24 +292,42 @@ async function run() {
       const result = await doctorsColleaction.deleteOne(filter)
       res.send(result)
     })
+ 
 
     //pyament server
-    app.post('/create-payment-intent', async (req, res) => {
-      const booking = req.body;
-      const price = booking.price;
-      const amount = price * 100;
 
-      const paymentIntent = await stripe.paymentIntents.create({
-          currency: 'usd',
-          amount: amount,
-          "payment_method_types": [
-              "card"
-          ]
-      });
-      res.send({
-          clientSecret: paymentIntent.client_secret,
-      });
-  });
+
+  // app.post('/create-payment-intent',async(req,res)=>{
+  //   const booking=req.boby;
+  //   const price=booking.price
+  //   const amount=price*100
+  //   const paymentIntent=await stripe.paymentIntent.create({
+  //     currency:'usd',
+  //     amount:amount,
+  //     "payment_method_types":[
+  //       "card"
+  //     ]
+  //   })
+  //   res.send({
+  //     clientSecret:paymentIntent.client_secret,
+  //   })
+  // })
+
+  app.post('/payments', async (req, res) =>{
+    const payment = req.body;
+    const result = await paymentsCollection.insertOne(payment);
+    const id = payment.bookingId
+    const filter = {_id: ObjectId(id)}
+    const updatedDoc = {
+        $set: {
+            paid: true,
+            transactionId: payment.transactionId
+        }
+    }
+    const updatedResult = await bookingsColleaction.updateOne(filter, updatedDoc)
+    res.send(result);
+})
+
 
   }
   finally {
